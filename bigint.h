@@ -20,6 +20,7 @@ BigInt big_int_from_uint64_t(uint64_t num);
 BigInt big_int_from_uint32_t(uint32_t num);
 BigInt big_int_from_byte_array_le(unsigned char * buff,size_t buff_len);
 BigInt big_int_from_byte_array_be(unsigned char * buff,size_t buff_len);
+BigInt big_int_from_string(char* string);
 
 void big_int_uadd(BigInt *a, BigInt *b,BigInt *c);
 void big_int_add(BigInt *a, BigInt *b,BigInt *c);

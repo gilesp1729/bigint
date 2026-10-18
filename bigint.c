@@ -8,7 +8,6 @@
 
 /*
 * TODO LIST:
-* - Reuse bigints passed to result args, to sve mallocing. Size might not equal alloced size.
 * - Where possible, allow dest to be the same as one of the operands and be overwritten.
 * - Some routines declare bigints and return them -
 *   They are
@@ -19,6 +18,12 @@
 * and also big_int_copy, big_int_constructor_from_string etc.
 * This is OK-ish, because the bigints are never malloc/freed (only their underlying
 * integer arrays are)
+* 
+* Need:
+* - something like big_int_copy that links the new integer[] and frees the original
+* - big_int_mult_by_uint32_t (and add, sub, ...)
+* - rationalise all the routines that create/construct
+* - some sort of mark/cleanup for the array memory?(it's really crying out for C++)
 * 
 * 
 * 
@@ -179,25 +184,53 @@ void big_int_print(BigInt *a,int mode){
 		printf("-");
 	}
 
-	switch(mode){
-		case 0:{
-			for(size_t i = 0; i < a->size ; i++){
-				printf("0x%08X ",a->integer[i]);
+	switch(mode)
+	{
+	case 0:
+		// Hex, LS word first
+		for(size_t i = 0; i < a->size ; i++)
+			printf("0x%08X ",a->integer[i]);
+		break;
+	case 1:
+		// Hex, MS word first
+		for(int i = (a->size)-1; i >=0 ; --i)
+			printf("0x%08X ",a->integer[i]);
+		break;
+	case 2:
+		// Hex, MS word first, with 0x prepended
+		printf("0x");
+		for(int i = (a->size)-1; i >=0 ; --i)
+			printf("%08X",a->integer[i]);
+		break;
+	case 3:
+		// Decimal
+		{
+			char* revbuf = malloc(a->size * 16);	// should be big enough (double the hex size)
+			BigInt c = big_int_copy(*a);			// don't clobber the input
+			BigInt ten = big_int_from_uint32_t(10);
+			BigInt q = { 0, };						// quotient and remainder
+			BigInt r = { 0, };
+			int i = 0;
+			while (!big_int_is_zero(&c))
+			{
+				big_int_div(&c, &ten, &q, &r);
+				revbuf[i++] = r.integer[0] + '0';
+				// TODO: Copy q to c, but don't leave original c.integer[] dangling.
+				c = big_int_copy(q);
 			}
-			break;
-		}
-		case 1:{
-			for(int i = (a->size)-1; i >=0 ; --i){
-				printf("0x%08X ",a->integer[i]);
+			// Print reversed digits forward. Handle zero specially.
+			if (i == 0)
+				putchar('0');
+			else
+			{
+				while (i-- > 0)
+					putchar(revbuf[i]);
 			}
-			break;
+			free(revbuf);
+			big_int_destructor(&q);
+			big_int_destructor(&r);
 		}
-		case 2:{
-			printf("0x");
-			for(int i = (a->size)-1; i >=0 ; --i){
-				printf("%08X",a->integer[i]);
-			}
-		}
+		break;
 	}
 	printf("\n");
 }
@@ -220,19 +253,7 @@ BigInt big_int_constructor(short sign, size_t size, ...){
 	return number;
 }
 
-BigInt big_int_constructor_from_array(short sign, size_t size, uint32_t *contents)
-{
-	BigInt number;
-	number.integer = malloc(sizeof(uint32_t) * size);
-	for (size_t i = 0; i < size; i++) {
-		number.integer[i] = contents[i]);
-	}
-	number.sign = sign;
-	number.size = size;
-	return number;
-}
-
-BigInt big_int_constructor_from_string(char *string)
+BigInt big_int_from_string(char *string)
 {
 	size_t lenstr = strlen(string);
 	size_t start = 0;
@@ -241,20 +262,20 @@ BigInt big_int_constructor_from_string(char *string)
 	BigInt a, bigbase;
 
 	// Check for minus sign
-	if (string[0] = '-')
+	if (string[0] == '-')
 	{
 		sign = 1;
 		start = 1;
 	}
 
 	// Check for hex string
-	if (strnicmp(string, "0x", 2) == 0)
+	if (_strnicmp(string, "0x", 2) == 0)
 	{
 		base = 16;
 		start += 2;
 	}
 
-	size_t size = ((lenstr - start) + 3) / 4;
+	size_t size = ((lenstr - start) + 7) / 8;
 	a.sign = sign;
 	a.size = size;
 	a.integer = malloc(sizeof(uint32_t) * size);
@@ -264,15 +285,19 @@ BigInt big_int_constructor_from_string(char *string)
 	{
 		BigInt temp = { 0, };
 		BigInt temp2 = { 0, };
-		big_int_mult(&a, &bigbase, &temp);			// TODO: Get that reuse going!
+		BigInt bigdigit = { 0, };
+		big_int_mult(&a, &bigbase, &temp);	
 		a = big_int_copy(temp);
 		
-		// Extract the digit. Skip any separating spaces, commas or underscores.
-		int digit = string[i] - '0';
-		
-		
-		
-		
+		// Extract the digit. TODO: Skip any separating spaces, commas or underscores.
+		char ch = string[i];
+		if (ch >= 'a')
+			ch = ch - 'a' + 10;
+		else if (ch >= 'A')
+			ch = ch - 'A' + 10;
+		else if (ch >= '0')
+			ch -= '0';
+		bigdigit = big_int_from_uint32_t((uint32_t)ch);
 		big_int_add(&temp, &bigdigit, &temp2);		// TODO: Need big_int_add_uint32
 		a = big_int_copy(temp2);
 	}
@@ -567,9 +592,6 @@ void big_int_uadd(BigInt *a, BigInt *b,BigInt *c){
 	}
 
 	// TODO: This depends on not passing uninitialised memory. It must be kept.
-	// BUT... if the result(c) contains a valid bigint, and it is large enough,
-	// we should reuse it, to save mallocing. This means the size might not equal the
-	// allocated size.
 
 	if (c->integer != NULL) {
 		free(c->integer);
