@@ -6,6 +6,25 @@
 
 #define MAXVAL 0xFFFFFFFFULL 
 
+/*
+* TODO LIST:
+* - Reuse bigints passed to result args, to sve mallocing. Size might not equal alloced size.
+* - Where possible, allow dest to be the same as one of the operands and be overwritten.
+* - Some routines declare bigints and return them -
+*   They are
+* BigInt big_int_from_uint64_t(uint64_t num);
+* BigInt big_int_from_uint32_t(uint32_t num);
+* BigInt big_int_from_byte_array_le(unsigned char * buff,size_t buff_len);
+* BigInt big_int_from_byte_array_be(unsigned char * buff,size_t buff_len);
+* and also big_int_copy, big_int_constructor_from_string etc.
+* This is OK-ish, because the bigints are never malloc/freed (only their underlying
+* integer arrays are)
+* 
+* 
+* 
+* 
+*/
+
 //stored as little endian
 
 int count_leading_zeros(uint32_t x) {
@@ -21,6 +40,7 @@ int count_leading_zeros(uint32_t x) {
     return count;
 }
 
+// TODO: Dangerous. Fix this.
 BigInt big_int_copy(BigInt a){
 	BigInt b;
 	b.sign = a.sign;
@@ -137,10 +157,6 @@ int big_int_compare(BigInt *a,BigInt *b, int modulus){
 }
 
 
-// TODO: Routines to input and output bigints to strings, in any given base.
-
-
-
 void big_int_print(BigInt *a,int mode){
 	if(!a){
 		fprintf(stderr,"Pointer supplied to print is invalid\n");
@@ -186,6 +202,10 @@ void big_int_print(BigInt *a,int mode){
 	printf("\n");
 }
 
+// Constructors.
+// - from variable argument list
+// - from array of uint32_t
+// - from string with optional leading sign and 0x for hex
 
 BigInt big_int_constructor(short sign, size_t size, ...){
 	BigInt number;
@@ -199,6 +219,69 @@ BigInt big_int_constructor(short sign, size_t size, ...){
 	number.size = size;
 	return number;
 }
+
+BigInt big_int_constructor_from_array(short sign, size_t size, uint32_t *contents)
+{
+	BigInt number;
+	number.integer = malloc(sizeof(uint32_t) * size);
+	for (size_t i = 0; i < size; i++) {
+		number.integer[i] = contents[i]);
+	}
+	number.sign = sign;
+	number.size = size;
+	return number;
+}
+
+BigInt big_int_constructor_from_string(char *string)
+{
+	size_t lenstr = strlen(string);
+	size_t start = 0;
+	short sign = 1;
+	int	base = 10;
+	BigInt a, bigbase;
+
+	// Check for minus sign
+	if (string[0] = '-')
+	{
+		sign = 1;
+		start = 1;
+	}
+
+	// Check for hex string
+	if (strnicmp(string, "0x", 2) == 0)
+	{
+		base = 16;
+		start += 2;
+	}
+
+	size_t size = ((lenstr - start) + 3) / 4;
+	a.sign = sign;
+	a.size = size;
+	a.integer = malloc(sizeof(uint32_t) * size);
+	bigbase = big_int_from_uint32_t(base);			// TODO: Need a big_int_mult_by_uint32_t or some such.
+	memset(a.integer, 0, sizeof(uint32_t) * size);
+	for (size_t i = start; i < lenstr; i++)
+	{
+		BigInt temp = { 0, };
+		BigInt temp2 = { 0, };
+		big_int_mult(&a, &bigbase, &temp);			// TODO: Get that reuse going!
+		a = big_int_copy(temp);
+		
+		// Extract the digit. Skip any separating spaces, commas or underscores.
+		int digit = string[i] - '0';
+		
+		
+		
+		
+		big_int_add(&temp, &bigdigit, &temp2);		// TODO: Need big_int_add_uint32
+		a = big_int_copy(temp2);
+	}
+	// Because of separators, the size may be an overestimate. Trim it back.
+
+
+	return a;
+}
+
 
 void big_int_destructor(BigInt *bignum) {
     if (bignum && bignum->integer) {
@@ -485,7 +568,7 @@ void big_int_uadd(BigInt *a, BigInt *b,BigInt *c){
 
 	// TODO: This depends on not passing uninitialised memory. It must be kept.
 	// BUT... if the result(c) contains a valid bigint, and it is large enough,
-	// we should use it, to save mallocing. This means the size might not equal the
+	// we should reuse it, to save mallocing. This means the size might not equal the
 	// allocated size.
 
 	if (c->integer != NULL) {
