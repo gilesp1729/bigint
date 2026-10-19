@@ -66,6 +66,7 @@ int big_int_safe_realloc(BigInt *a, size_t new_size_words) {
 
 	//printf("Realloc requested for side = %zu\n",new_size_words);
 
+#if 0
 	uint32_t *new_mem = realloc(a->integer, sizeof(uint32_t) * new_size_words);
 	if (!new_mem) {
 		return 0;
@@ -78,6 +79,22 @@ int big_int_safe_realloc(BigInt *a, size_t new_size_words) {
 	}
 
 	a->integer = new_mem;
+
+#else // lazy realloc (no need if it's getting smaller)
+
+	if (new_size_words > a->size) {
+		uint32_t* new_mem = realloc(a->integer, sizeof(uint32_t) * new_size_words);
+		if (!new_mem) {
+			return 0;
+		}
+
+		size_t old_size_bytes = sizeof(uint32_t) * a->size;
+		size_t new_size_bytes = sizeof(uint32_t) * new_size_words;
+		memset(((uint8_t*)new_mem) + old_size_bytes, 0, new_size_bytes - old_size_bytes);
+		a->integer = new_mem;
+	}
+
+#endif
 	a->size = new_size_words;
 
 	return 1; // success
@@ -162,22 +179,22 @@ int big_int_compare(BigInt *a,BigInt *b, int modulus){
 }
 
 
-void big_int_print(BigInt *a,int mode){
+void big_int_print(BigInt *a,int mode,char *caption){
 	if(!a){
-		fprintf(stderr,"Pointer supplied to print is invalid\n");
+		fprintf(stderr,"%s: Pointer supplied to print is invalid\n", caption);
 		return;
 	}
 	if(a->integer == NULL){
-		fprintf(stderr,"Pointer supplied has no integer\n");
+		fprintf(stderr,"%s, Pointer supplied has no integer\n", caption);
 		return;
 	}
 	
 	if(a->size == 0){
-		fprintf(stderr,"0 size pointer\n");
+		fprintf(stderr,"%s: 0 size pointer\n", caption);
 		return;
 	}
 	else{
-		printf("print size = %zu\n",a->size);
+		printf("%s: print size = %zu\n", caption,a->size);
 	}
 	//printf("Sign = %d\n",a->sign);
 	if(a->sign == 1){
@@ -213,10 +230,10 @@ void big_int_print(BigInt *a,int mode){
 			int i = 0;
 			while (!big_int_is_zero(&c))
 			{
-				big_int_div(&c, &ten, &q, &r);
+				big_int_div(&c, &ten, &q, &r);		// TODO: this will free q/r integers, but watch out for inconsistencies elsewhere
 				revbuf[i++] = r.integer[0] + '0';
-				// TODO: Copy q to c, but don't leave original c.integer[] dangling.
-				c = big_int_copy(q);
+				big_int_destructor(&c);
+				c = big_int_copy(q);				// Can be faster as q not rrequired aagain, but see above
 			}
 			// Print reversed digits forward. Handle zero specially.
 			if (i == 0)
@@ -229,7 +246,9 @@ void big_int_print(BigInt *a,int mode){
 			free(revbuf);
 			big_int_destructor(&q);
 			big_int_destructor(&r);
-		}
+			big_int_destructor(&c);
+			big_int_destructor(&ten);
+	}
 		break;
 	}
 	printf("\n");
@@ -275,19 +294,14 @@ BigInt big_int_from_string(char *string)
 		start += 2;
 	}
 
-	size_t size = ((lenstr - start) + 7) / 8;
-	a.sign = sign;
-	a.size = size;
-	a.integer = malloc(sizeof(uint32_t) * size);
 	bigbase = big_int_from_uint32_t(base);			// TODO: Need a big_int_mult_by_uint32_t or some such.
-	memset(a.integer, 0, sizeof(uint32_t) * size);
+	a = big_int_constructor(0, 1, 0);
 	for (size_t i = start; i < lenstr; i++)
 	{
 		BigInt temp = { 0, };
 		BigInt temp2 = { 0, };
 		BigInt bigdigit = { 0, };
 		big_int_mult(&a, &bigbase, &temp);	
-		a = big_int_copy(temp);
 		
 		// Extract the digit. TODO: Skip any separating spaces, commas or underscores.
 		char ch = string[i];
@@ -299,11 +313,13 @@ BigInt big_int_from_string(char *string)
 			ch -= '0';
 		bigdigit = big_int_from_uint32_t((uint32_t)ch);
 		big_int_add(&temp, &bigdigit, &temp2);		// TODO: Need big_int_add_uint32
+		big_int_destructor(&a);
 		a = big_int_copy(temp2);
+		big_int_destructor(&temp);
+		big_int_destructor(&temp2);
+		big_int_destructor(&bigdigit);
 	}
-	// Because of separators, the size may be an overestimate. Trim it back.
-
-
+	big_int_destructor(&bigbase);
 	return a;
 }
 
@@ -592,6 +608,8 @@ void big_int_uadd(BigInt *a, BigInt *b,BigInt *c){
 	}
 
 	// TODO: This depends on not passing uninitialised memory. It must be kept.
+	// But not consistent everywhere. Need to make it so, and perhaps allow reuse
+	// saving mallocs. (alloced size != size then)
 
 	if (c->integer != NULL) {
 		free(c->integer);

@@ -44,7 +44,7 @@ void big_int_word_shift_l(BigInt *a,size_t s);
 int big_int_is_zero(BigInt *a);
 int big_int_compare(BigInt *a,BigInt *b, int modulus);
 
-void big_int_print(BigInt * a,int mode);
+void big_int_print(BigInt * a,int mode,char *caption);
 void big_int_swap(BigInt * a, BigInt * b);
 int big_int_count_leading_zeros(BigInt *a);
 BigInt big_int_copy(BigInt a);
