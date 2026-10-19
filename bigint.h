@@ -47,7 +47,8 @@ int big_int_compare(BigInt *a,BigInt *b, int modulus);
 void big_int_print(BigInt * a,int mode,char *caption);
 void big_int_swap(BigInt * a, BigInt * b);
 int big_int_count_leading_zeros(BigInt *a);
-BigInt big_int_copy(BigInt a);
+void big_int_copy(BigInt* a, BigInt* b);
+void big_int_transfer(BigInt* a, BigInt* b);
 
 size_t big_int_bit_length(BigInt *a);
 unsigned char * big_int_to_byte_array_be(BigInt * a, size_t * len);
