@@ -3,6 +3,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
+#include <intrin.h>
 
 #define MAXVAL 0xFFFFFFFFULL 
 
@@ -656,17 +657,24 @@ void big_int_uadd(BigInt *a, BigInt *b,BigInt *c){
 	
 	size_t i;
 	for(i = 0 ; i < sizeB ; i++){
+#if 0  // 32-bit original code
 		uint64_t temp = (uint64_t)a->integer[i] + (uint64_t)b->integer[i] + carry;
 		carry = (temp > MAXVAL);
-		c->integer[i] = (temp & MAXVAL);	
+		c->integer[i] = (temp & MAXVAL);
+#else 
+		carry = _addcarry_u32(carry, a->integer[i], b->integer[i], &c->integer[i]);
+#endif
 		
 	}
 	
 	for(i = sizeB ; i < sizeA ; i++){
+#if 0  // 32-bit original code
 		uint64_t temp = (uint64_t)a->integer[i] + carry;
 		carry = (temp > MAXVAL);
 		c->integer[i] = (temp & MAXVAL);
-		
+#else 
+		carry = _addcarry_u32(carry, a->integer[i], 0, &c->integer[i]);
+#endif
 	}
 	
 	if(carry){
@@ -757,6 +765,7 @@ void big_int_usub(BigInt *a, BigInt *b,BigInt *c){
 	short int borrow = 0;
 	
 	size_t i;
+#if 0	// Old code
 	//printf("\t\t\t\t\t\t\tsizeC = %zu\n",sizeC);
 	for(i = 0 ; i < sizeC ; i++){
 		//printf("i = %zu\n",i);
@@ -768,7 +777,14 @@ void big_int_usub(BigInt *a, BigInt *b,BigInt *c){
 		//printf("res(unsigned) = %lX  MAXVAL = %llX  res & MAXVAL  = %X\n",res,MAXVAL,res & MAXVAL);
 		borrow = (res <= MAXVAL);
 	}
-	
+#else
+	// do it like big_int_add does - separate loops 0-sizeB and sizeB-sizeA
+
+
+		borrow = _subborrow_u32(borrow, a->integer[i], b->integer[i], &c->integer[i]);
+#endif
+
+
 	/*
 	if(borrow){
 		c->sign = 1;
@@ -1020,17 +1036,17 @@ int big_int_div(BigInt *u, BigInt *v,BigInt *q, BigInt *r){
 			r->integer[i] = shifted | carried;
 		}
 		r->integer[n-1] = un[n-1] >> s;
-	}
 	
-	i = sizeR-1;
-	while( i > 0 && r->integer[i] == 0x0){
-		i--;
+		i = sizeR-1;
+		while( i > 0 && r->integer[i] == 0x0){
+			i--;
+		}
+		if (!big_int_safe_realloc(r, i+1)) {
+			fprintf(stderr, "Error: Failed to reallocate BigInt to size %zu words\n", (long unsigned int)i+1);
+			exit(EXIT_FAILURE);
+		}
 	}
-	if (!big_int_safe_realloc(r, i+1)) {
-		fprintf(stderr, "Error: Failed to reallocate BigInt to size %zu words\n", (long unsigned int)i+1);
-		exit(EXIT_FAILURE);
-	}
-	
+
 	i = sizeQ-1;
 	while( i > 0 && q->integer[i] == 0x0){
 		i--;
