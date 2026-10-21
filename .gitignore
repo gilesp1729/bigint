@@ -1,3 +1,5 @@
 /.vs/bigint/v16
 /Debug
 /Release
+/x64/Debug
+/x64/Release

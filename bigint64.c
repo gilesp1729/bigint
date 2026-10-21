@@ -6,7 +6,10 @@
 #include <intrin.h>
 #include <assert.h>
 
-// For 32-bit code: the largest possible value.
+#ifndef _M_X64
+#error This source builds on x64 only.
+#endif
+
 #define MAXVAL 0xFFFFFFFFULL 
 
 /*
@@ -227,6 +230,7 @@ int big_int_compare(BigInt *a,BigInt *b, int modulus){
 }
 
 
+#if 0 // ############ TEMP until we have a div ###########
 void big_int_print(BigInt *a,int mode,char *caption){
 	if(!a){
 		fprintf(stderr,"%s: Pointer supplied to print is invalid\n", caption);
@@ -302,6 +306,7 @@ void big_int_print(BigInt *a,int mode,char *caption){
 	printf("\n");
 }
 
+#endif // 0 ########### TEMP ###########
 // Constructors.
 // - from variable argument list
 // - from array of uint_t
@@ -404,7 +409,7 @@ void big_int_inc(BigInt *a){
 
 	size_t sizeA = a->size;
 	unsigned char carry = 0;
-	carry = _addcarry_u64(carry, a->integer[0], 1, &a->integer[0]);		//TODO make this select betweem u32 and u64
+	carry = _addcarry_u64(carry, a->integer[0], 1, &a->integer[0]);	
 	for (size_t i = 1; i < sizeA; i++) {
 		carry = _addcarry_u64(carry, a->integer[i], 0, &a->integer[i]);
 	}
@@ -691,8 +696,6 @@ void big_int_sub(BigInt * a,BigInt *b,BigInt * c){
 
 }
 
-// These routines need completely rewriting for x64. Don't hold your breath.
-#ifndef _M_X64
 
 void big_int_mult(BigInt *a, BigInt *b,BigInt *c){
 	if(b->size > a->size){
@@ -703,46 +706,66 @@ void big_int_mult(BigInt *a, BigInt *b,BigInt *c){
 	check_and_free(c);
 
 	// a is always the larger number 
-	size_t sizeA = a->size * SIZE32;					// TODO make all sizes in mult/div size*2
-	size_t sizeB = b->size * SIZE32;					// TODO use integer32 throughout
+	size_t sizeA = a->size;
+	size_t sizeB = b->size;
 	assert(sizeA >= sizeB);
 	size_t sizeC = sizeA + sizeB;
 	//printf("A sign = %d B sign =%d\n", a->sign,b->sign);
 	
 	c->sign = a->sign ^ b->sign;
 	
-	c->integer = malloc(sizeof(uint32_t) * sizeC);
-	memset(c->integer, 0, sizeof(uint32_t) * sizeC);
+	c->integer = malloc(sizeof(uint_t) * sizeC);
+	memset(c->integer, 0, sizeof(uint_t) * sizeC);
 	c->size = sizeC;
 	
 	
 	for(size_t i = 0 ; i < sizeB ; ++i){	//for all elemnets of b
-		uint32_t carry = 0x0;
+		uint_t lo_prod, hi_prod, lo_temp, hi_temp;
+		uint_t prod_carry = 0;
 
 		size_t j;
-		for(j = i ; j < sizeA + i ;  j++){//for all elements of a
-			
+		for(j = i ; j < sizeA + i ;  j++){  //for all elements of a
+#if 0 // orig 32-bit code			
 			uint64_t product = (uint64_t)a->integer[j-i] * (uint64_t)b->integer[i];
 			uint64_t sum = (uint64_t)c->integer[j] + product + carry;		// does not overflow, believe it or not.
 			c->integer[j] = (uint32_t)(sum & MAXVAL);
 			carry = (uint32_t)(sum >> 32);
-		}
+#else
+			lo_prod = _umul128(a->integer[j - i], b->integer[i], &hi_prod);
 
+			// sum = c->integer[j] + (hi_prod,lo_prod) + prod_carry
+			unsigned char carry = 0;
+			carry = _addcarry_u64(carry, lo_prod, c->integer[j], &lo_temp);
+			carry = _addcarry_u64(carry, hi_prod, 0, &hi_temp);
+
+			carry = 0;
+			carry = _addcarry_u64(carry, lo_temp, prod_carry, &c->integer[j]);
+			carry = _addcarry_u64(carry, hi_temp, 0, &prod_carry);
+#endif
+		}
+#if 0 // orig 32-bit code
 		if(carry){
 			uint64_t sum = (uint64_t)c->integer[j] + carry;
 			c->integer[j] = (uint32_t)(sum & MAXVAL);
+#else
+		if (prod_carry) {
+			c->integer[j] += prod_carry;
+#endif
 		}
 	}
 	
-	size_t i = sizeC-1;								// TODO: Be VERY careful when extending sizes in 64-bit.
+	size_t i = sizeC-1;	
 	while( i > 0 && c->integer[i] == 0x0){
 		i--;
 	}
 	if (!big_int_safe_realloc(c, i+1)) {
-		fprintf(stderr, "Error: Failed to reallocate BigInt to size %zu words\n", (long unsigned int)i+1);
+		fprintf(stderr, "Error: Failed to reallocate BigInt to size %zu words\n", (uint_t)i+1);
 		exit(EXIT_FAILURE);
 	}
 }
+
+// These routines need completely rewriting for x64. Don't hold your breath.
+#ifndef _M_X64
 
 int big_int_div(BigInt *u, BigInt *v,BigInt *q, BigInt *r){
 	

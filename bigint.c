@@ -6,6 +6,10 @@
 #include <intrin.h>
 #include <assert.h>
 
+#ifdef _M_X64
+#error This source builds on x86 only.
+#endif
+
 // For 32-bit code: the largest possible value.
 #define MAXVAL 0xFFFFFFFFULL 
 
@@ -404,11 +408,10 @@ void big_int_inc(BigInt *a){
 
 	size_t sizeA = a->size;
 	unsigned char carry = 0;
-	carry = _addcarry_u32(carry, a->integer[0], 1, &a->integer[0]);		//TODO make this select betweem u32 and u64
+	carry = _addcarry_u32(carry, a->integer[0], 1, &a->integer[0]);
 	for (size_t i = 1; i < sizeA; i++) {
 		carry = _addcarry_u32(carry, a->integer[i], 0, &a->integer[i]);
 	}
-
 	
 	if(carry){
 		if (!big_int_safe_realloc(a, sizeA  +1)) {
@@ -701,8 +704,8 @@ void big_int_mult(BigInt *a, BigInt *b,BigInt *c){
 	check_and_free(c);
 
 	// a is always the larger number 
-	size_t sizeA = a->size * SIZE32;					// TODO make all sizes in mult/div size*2
-	size_t sizeB = b->size * SIZE32;					// TODO use integer32 throughout
+	size_t sizeA = a->size;	
+	size_t sizeB = b->size;	
 	assert(sizeA >= sizeB);
 	size_t sizeC = sizeA + sizeB;
 	//printf("A sign = %d B sign =%d\n", a->sign,b->sign);
