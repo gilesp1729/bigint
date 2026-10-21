@@ -230,7 +230,6 @@ int big_int_compare(BigInt *a,BigInt *b, int modulus){
 }
 
 
-#if 0 // ############ TEMP until we have a div ###########
 void big_int_print(BigInt *a,int mode,char *caption){
 	if(!a){
 		fprintf(stderr,"%s: Pointer supplied to print is invalid\n", caption);
@@ -271,6 +270,7 @@ void big_int_print(BigInt *a,int mode,char *caption){
 		for(int i = (a->size)-1; i >=0 ; --i)
 			printf("%08I64X",a->integer[i]);
 		break;
+#if 0 // ############ TEMP until we have a div ###########
 	case 3:
 		// Decimal
 		{
@@ -302,11 +302,12 @@ void big_int_print(BigInt *a,int mode,char *caption){
 			big_int_destructor(&ten);
 	}
 		break;
+#endif // 0 ########### TEMP ###########
 	}
 	printf("\n");
 }
 
-#endif // 0 ########### TEMP ###########
+
 // Constructors.
 // - from variable argument list
 // - from array of uint_t
@@ -482,10 +483,10 @@ void big_int_bit_shift_r(BigInt *a,size_t s){
 		return;
 	}
 	
-	if (s >= 32) {
-		size_t s_word = s / 32;					// TODO: Make this work in 64
+	if (s >= WORDSIZE) {
+		size_t s_word = s / WORDSIZE;	
 		big_int_word_shift_r(a, s_word);
-		s = s % 32;
+		s = s % WORDSIZE;
 		if (s == 0) return;  // already done
 	}
 	
@@ -493,7 +494,7 @@ void big_int_bit_shift_r(BigInt *a,size_t s){
 	size_t sizeA = a->size; 
 	for(i = 0 ; i < sizeA - 1 ; ++i){
 		uint_t shifted = ((a->integer[i]) >> s);
-		uint_t carried = (a->integer[i+1]) << (32-s);
+		uint_t carried = (a->integer[i+1]) << (WORDSIZE -s);
 		
 		a->integer[i] = shifted | carried;
 	}
@@ -516,16 +517,16 @@ void big_int_bit_shift_l(BigInt *a, size_t s) {
     if (!a || a->size == 0 || s == 0) return;
 
     // Word-level shift first
-    if (s >= 32) {
-        size_t s_word = s / 32;
+    if (s >= WORDSIZE) {
+        size_t s_word = s / WORDSIZE;
         big_int_word_shift_l(a, s_word);
-        s %= 32;
+        s %= WORDSIZE;
         if (s == 0) return;  // No remaining bit shift
     }
 
     size_t old_size = a->size;
     uint_t high_word = a->integer[old_size - 1];
-    uint_t carry_out = high_word >> (32 - s);		// TODO make this work in 64
+    uint_t carry_out = high_word >> (WORDSIZE - s);
 
     // If carry_out is non-zero, add one more word
     if (carry_out) {

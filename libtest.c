@@ -88,6 +88,17 @@ void test_correctness()
 	big_int_destructor(&cmp);
 	big_int_destructor(&tst);
 #endif
+
+
+
+	temp = big_int_from_string("0xFFFFFFFFFFFFFFFF0000000000000000");
+	cmp  = big_int_from_string("0xFFFFFFFFFFFFFFFF000000000000000000");
+	big_int_bit_shift_l(&temp, 8);
+	printf("Left shift 8 bits: %d\n", big_int_compare(&temp, &cmp, 1));
+	big_int_print(&temp, 1, "Shifted");
+	big_int_destructor(&temp);
+	big_int_destructor(&cmp);
+
 	getchar();
 }
 
@@ -170,7 +181,7 @@ void test_benchmarks(void)
 int main()
 {
 //	test_stringIO();
-//	test_correctness();
-	test_benchmarks();
+	test_correctness();
+//	test_benchmarks();
 }
 

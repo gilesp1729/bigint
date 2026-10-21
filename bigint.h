@@ -10,6 +10,10 @@
 #else
 	typedef uint32_t  uint_t;
 #endif
+
+// 32 or 64
+#define WORDSIZE (sizeof(uint_t) << 3)
+
 typedef struct {
 	uint_t* integer;
 	size_t size;		//no of elements in array. 
