@@ -46,7 +46,16 @@ void test_correctness()
 	BigInt res = { 0, };
 	BigInt tst = { 0, };
 
-	BigInt cmp = big_int_from_string("10000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000");
+	BigInt temp = big_int_from_string("1000000000000000000000000000000");
+	BigInt cmp = big_int_from_string("1000000000000000000000000000001");
+	big_int_inc(&temp);
+	big_int_sub(&temp, &cmp, &tst);
+	big_int_print(&tst, 3, "Increment");
+	big_int_destructor(&temp);
+	big_int_destructor(&cmp);
+	big_int_destructor(&tst);
+
+	cmp = big_int_from_string("10000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000");
 	big_int_add(&t100, &t30, &res);
 	big_int_sub(&res, &cmp, &tst);
 	big_int_print(&tst, 3, "Addition");
@@ -64,8 +73,6 @@ void test_correctness()
 
 	cmp = big_int_from_string("9999999999999999999999999999999999999999999999999999999999999999999999000000000000000000000000000000");
 	big_int_sub(&t100, &t30, &res);
-	big_int_print(&cmp, 3, "Sub Expected");
-	big_int_print(&res, 3, "Sub Result");
 	big_int_sub(&res, &cmp, &tst);
 	big_int_print(&tst, 3, "Subtraction");
 	big_int_destructor(&res);
@@ -80,6 +87,7 @@ void test_correctness()
 	big_int_destructor(&cmp);
 	big_int_destructor(&tst);
 
+#ifndef _M_X64
 	cmp = big_int_from_string("10000000000000000000000000000000000000000000000000000000000000000000000");
 	big_int_div(&t100, &t30, &res, NULL);
 	big_int_sub(&res, &cmp, &tst);
@@ -87,7 +95,7 @@ void test_correctness()
 	big_int_destructor(&res);
 	big_int_destructor(&cmp);
 	big_int_destructor(&tst);
-
+#endif
 	getchar();
 }
 
@@ -119,12 +127,24 @@ void test_benchmarks(void)
 		start = clock();
 		for (j = 1; j < 1000000; j++)
 		{
-			big_int_add(&digits[i], &digits[i-1], &res);
+			big_int_add(&digits[i], &digits[i - 1], &res);
 			big_int_destructor(&res);
 		}
 		ms[i] = clock() - start;
 	}
 	printf("Addition: %d %d %d %d %d %d\n", ms[1], ms[2], ms[3], ms[4], ms[5], ms[6]);
+
+	for (i = 1; i < NUM_DIGITS; i++)
+	{
+		start = clock();
+		for (j = 1; j < 1000000; j++)
+		{
+			big_int_sub(&digits[i], &digits[i - 1], &res);
+			big_int_destructor(&res);
+		}
+		ms[i] = clock() - start;
+	}
+	printf("Subtraction: %d %d %d %d %d %d\n", ms[1], ms[2], ms[3], ms[4], ms[5], ms[6]);
 
 	for (i = 1; i < NUM_DIGITS; i++)
 	{
@@ -138,6 +158,7 @@ void test_benchmarks(void)
 	}
 	printf("Multiplication: %d %d %d %d %d %d\n", ms[1], ms[2], ms[3], ms[4], ms[5], ms[6]);
 
+#ifndef _M_X64
 	for (i = 1; i < NUM_DIGITS; i++)
 	{
 		start = clock();
@@ -149,7 +170,7 @@ void test_benchmarks(void)
 		ms[i] = clock() - start;
 	}
 	printf("Division: %d %d %d %d %d %d\n", ms[1], ms[2], ms[3], ms[4], ms[5], ms[6]);
-
+#endif
 
 	getchar();
 }

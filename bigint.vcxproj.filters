@@ -21,6 +21,9 @@
     <ClCompile Include="libtest.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="bigint64.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bigint.h">
