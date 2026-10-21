@@ -14,6 +14,10 @@
 // 32 or 64
 #define WORDSIZE (sizeof(uint_t) << 3)
 
+// For 32-bit code: the largest possible value.
+#define MAXVAL 0xFFFFFFFFULL 
+
+
 typedef struct {
 	uint_t* integer;
 	size_t size;		//no of elements in array. 
@@ -54,6 +58,7 @@ int big_int_compare(BigInt *a,BigInt *b, int modulus);
 
 void big_int_print(BigInt * a,int mode,char *caption);
 void big_int_swap(BigInt * a, BigInt * b);
-
+void check_and_free(BigInt* a);
+int big_int_count_leading_zeros(BigInt* a);
 
 #endif
