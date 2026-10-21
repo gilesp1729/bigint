@@ -30,7 +30,6 @@ int big_int_safe_realloc(BigInt *a, size_t new_size_words);
 void big_int_destructor(BigInt * bignum);
 void big_int_copy(BigInt* a, BigInt* b);
 BigInt big_int_copy_from(BigInt a);
-//void big_int_transfer(BigInt* a, BigInt* b);
 
 BigInt big_int_from_uint64_t(uint64_t num);
 BigInt big_int_from_uint32_t(uint32_t num);
@@ -47,7 +46,6 @@ void big_int_mult(BigInt *a, BigInt *b,BigInt *c);
 int big_int_div(BigInt *u, BigInt *v,BigInt *q, BigInt *r);	
 int big_int_mod(BigInt *a,BigInt *b, BigInt * c);
 
-void big_int_inc(BigInt *a);
 void big_int_bit_shift_r(BigInt *a,size_t s);
 void big_int_bit_shift_l(BigInt *a,size_t s);
 void big_int_word_shift_r(BigInt *a,size_t s);

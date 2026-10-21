@@ -67,21 +67,6 @@ void big_int_copy(BigInt* a, BigInt* b)
 	memcpy(b->integer, a->integer, sizeof(uint_t) * a->size);
 }
 
-#if 0 // prob not needed
-// This is like the copy, but it transfers the source integer array over to the dest.
-// The dest is left empty. This saves a malloc, a memcpy, and a destructor call in the caller.
-void big_int_transfer(BigInt* a, BigInt* b)
-{
-	check_and_free(b);
-	b->sign = a->sign;
-	b->size = a->size;
-	b->integer = a->integer;	// copy the pointer
-	a->sign = 0;
-	a->size = 0;
-	a->integer = NULL;			// destroy a
-}
-#endif // 0
-
 int big_int_safe_realloc(BigInt* a, size_t new_size_words) {
 	if (!a) return 0;
 
@@ -240,12 +225,11 @@ BigInt big_int_from_string(char* string)
 		start += 2;
 	}
 
-	bigbase = big_int_from_uint_t(base);			// TODO: Need a big_int_mult_by_uint_t or some such.
+	bigbase = big_int_from_uint_t(base);
 	a = big_int_constructor(0, 1, 0);
 	for (size_t i = start; i < lenstr; i++)
 	{
 		BigInt temp = { 0, };
-		BigInt temp2 = { 0, };
 		BigInt bigdigit = { 0, };
 		big_int_mult(&a, &bigbase, &temp);
 
@@ -258,10 +242,8 @@ BigInt big_int_from_string(char* string)
 		else if (ch >= '0')
 			ch -= '0';
 		bigdigit = big_int_from_uint_t((uint_t)ch);
-		big_int_add(&temp, &bigdigit, &temp2);		// TODO: Need big_int_add_uint_t
-		big_int_copy(&temp2, &a);
+		big_int_add(&temp, &bigdigit, &a);
 		big_int_destructor(&temp);
-		big_int_destructor(&temp2);
 		big_int_destructor(&bigdigit);
 	}
 	big_int_destructor(&bigbase);

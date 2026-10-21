@@ -112,31 +112,6 @@ void big_int_print(BigInt *a,int mode,char *caption){
 	printf("\n");
 }
 
-void big_int_inc(BigInt *a){
-	if(!a){
-		fprintf(stderr,"Pointer supplied is not valid, Cant increment\n");
-		return;
-	}
-
-	size_t sizeA = a->size;
-	unsigned char carry = 0;
-	carry = _addcarry_u32(carry, a->integer[0], 1, &a->integer[0]);
-	for (size_t i = 1; i < sizeA; i++) {
-		carry = _addcarry_u32(carry, a->integer[i], 0, &a->integer[i]);
-	}
-	
-	if(carry){
-		if (!big_int_safe_realloc(a, sizeA  +1)) {
-			fprintf(stderr, "Error: Failed to reallocate BigInt to size %zu words\n", sizeA + 1);
-			exit(EXIT_FAILURE);
-		}
-		a->integer[sizeA] = 0x1;
-	}
-}
-
-
-
-
 void big_int_uadd(BigInt *a, BigInt *b,BigInt *c){
 	// printf("\t\t\tinside add\n");
 	// printf("\t\t\ta = ");

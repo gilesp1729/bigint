@@ -12,7 +12,7 @@ char* ten_to_1500_dec_str =
 char* ten_to_500_hex_str =
 "0x1f365fec9370d2baee34b150720878ea52ccba5e661e2f4fbda27e2b43bc65e952814f46187bf47646f960e57615b1b14565571de604d10b58df55762cd1b1d82d412b739baf43048fbf621de5493a15049a5ce8703d84990f0bcf9a1b88e0179c93273fff1641f92f53e9ccc53f7883cb08bdee813899aed8283c15eebd4372dad168bab87080f7d40d71a207f3ab7b6b100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
 
-#if 0
+#ifndef _M_X64
 void test_stringIO(void)
 {
 	BigInt ten_to_3000 = big_int_from_string(ten_to_3000_hex_str);
@@ -48,13 +48,8 @@ void test_correctness()
 
 	BigInt res = { 0, };
 	BigInt tst = { 0, };
-
-	BigInt temp = big_int_from_string("1000000000000000000000000000000");
-	BigInt cmp = big_int_from_string("1000000000000000000000000000001");
-	big_int_inc(&temp);
-	printf("Increment: %d\n", big_int_compare(&temp, &cmp, 1));
-	big_int_destructor(&temp);
-	big_int_destructor(&cmp);
+	BigInt temp = { 0, };
+	BigInt cmp = { 0, };
 
 	cmp = big_int_from_string("10000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000");
 	big_int_add(&t100, &t30, &res);
@@ -91,19 +86,19 @@ void test_correctness()
 
 	temp = big_int_from_string("0xFFFFFFFFFFFFFFFF0000000000000000");
 	cmp =  big_int_from_string("0xFFFFFFFFFFFFFFFF000000000000000000");
-	big_int_print(&temp, 1, "Original");
+	//big_int_print(&temp, 1, "Original");
 	big_int_bit_shift_l(&temp, 8);
 	printf("Left shift 8 bits: %d\n", big_int_compare(&temp, &cmp, 1));
-	big_int_print(&temp, 1, "L Shifted 8");
+	//big_int_print(&temp, 1, "L Shifted 8");
 	big_int_destructor(&temp);
 	big_int_destructor(&cmp);
 
 	temp = big_int_from_string("0xFFFFFFFFFFFFFFFF0000000000000000");
 	cmp =  big_int_from_string("0x00FFFFFFFFFFFFFFFF00000000000000");
-	big_int_print(&temp, 1, "Original");
+	//big_int_print(&temp, 1, "Original");
 	big_int_bit_shift_r(&temp, 8);
 	printf("Right shift 8 bits: %d\n", big_int_compare(&temp, &cmp, 1));
-	big_int_print(&temp, 1, "R Shifted 8");
+	//big_int_print(&temp, 1, "R Shifted 8");
 	big_int_destructor(&temp);
 	big_int_destructor(&cmp);
 
