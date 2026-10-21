@@ -126,15 +126,12 @@ void big_int_uadd(BigInt *a, BigInt *b,BigInt *c){
 		return;
 	}
 
-	check_and_free(c);
-
 	// a is always the larger number 
 	size_t sizeA = a->size;
 	size_t sizeB = b->size;
 	assert(sizeA >= sizeB);
 
-	c->integer = malloc(sizeof(uint_t) * sizeA);
-	c->size = sizeA;
+	check_and_reuse(c, sizeA);
 	
 	unsigned char carry = 0;
 	
@@ -190,8 +187,6 @@ void big_int_usub(BigInt *a, BigInt *b,BigInt *c){
 	// printf("\t\t\tb = ");
 	// big_int_print(b,1);
 
-	check_and_free(c);
-
 	if(big_int_compare(b,a,1) > 0){
 		// |b| > |a|
 		//printf("\t\t\t|b| > |a|\n");
@@ -207,8 +202,7 @@ void big_int_usub(BigInt *a, BigInt *b,BigInt *c){
 	//size_t sizeC = (sizeA > sizeB ? sizeA : sizeB);
 	assert(sizeA >= sizeB);
 
-	c->integer = malloc(sizeof(uint_t) * sizeA);
-	c->size = sizeA;
+	check_and_reuse(c, sizeA);
 	
 	size_t i;
 	// do it like big_int_add does - separate loops 0-sizeB and sizeB-sizeA
@@ -263,8 +257,6 @@ void big_int_mult(BigInt *a, BigInt *b,BigInt *c){
 		return;
 	}
 	
-	check_and_free(c);
-
 	// a is always the larger number 
 	size_t sizeA = a->size;	
 	size_t sizeB = b->size;	
@@ -274,10 +266,8 @@ void big_int_mult(BigInt *a, BigInt *b,BigInt *c){
 	
 	c->sign = a->sign ^ b->sign;
 	
-	c->integer = malloc(sizeof(uint32_t) * sizeC);
+	check_and_reuse(c, sizeC);
 	memset(c->integer, 0, sizeof(uint32_t) * sizeC);
-	c->size = sizeC;
-	
 	
 	for(size_t i = 0 ; i < sizeB ; ++i){	//for all elemnets of b
 		uint32_t carry = 0x0;
@@ -329,9 +319,6 @@ int big_int_div(BigInt *u, BigInt *v,BigInt *q, BigInt *r){
 	size_t m = u->size;
 	size_t n = v->size;
 
-	check_and_free(q);
-	check_and_free(r);
-
 	if(n > m){
 		*q = big_int_from_uint32_t(0);
 		if (r)
@@ -341,26 +328,20 @@ int big_int_div(BigInt *u, BigInt *v,BigInt *q, BigInt *r){
 	
 	size_t sizeQ = m - n + 1;
 	size_t sizeR = n;
-	
+	check_and_reuse(q, sizeQ);
+	check_and_reuse(r, sizeR);
+
 	long long t, k;
 	unsigned int i;
 	int j;
 
-	q->integer = malloc(sizeof(uint32_t) * sizeQ);
-	q->size = sizeQ;
-	
-	if(r){
-		r->integer = malloc(sizeof(uint32_t) * sizeR);
-		r->size = sizeR;
-	}
-	
 	if (m < n || n <= 0 || v->integer[n - 1] == 0) {
 		free(q->integer);
 		if (r) free(r->integer);
 		return 1;
 	}
 	
-	//easy casse hard coded
+	// easy case hard coded when divisor size is 1
 	if(n == 1){
 		k = 0;
 		for(j = m - 1 ; j >= 0 ; --j){

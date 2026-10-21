@@ -27,14 +27,27 @@ int count_leading_zeros(uint_t x) {
 	return count;
 }
 
-// If a contains a valid bigint, clear it by freeing its integer array.
-void check_and_free(BigInt* a)
+// If a contains a valid bigint, and it is large enough to meet the requested size,
+// reuse it. Otherwise reallocate its integer array, or allocate a new one if
+// none was present. 
+void check_and_reuse(BigInt* a, size_t req_size)
 {
-	if (a && a->integer != NULL)
+	if (!a)
 	{
-		free(a->integer);
-		a->integer = NULL;
-		a->size = 0;
+		return;
+	}
+	else if (a->integer != NULL)
+	{
+		if (req_size <= a->size)
+			return;
+		a->integer = realloc(a->integer, req_size * sizeof(uint_t));
+		a->size = req_size;
+		a->sign = 0;
+	}
+	else
+	{
+		a->integer = malloc(req_size * sizeof(uint_t));
+		a->size = req_size;
 		a->sign = 0;
 	}
 }
@@ -55,11 +68,8 @@ BigInt big_int_copy_from(BigInt a)
 // The new version checks and frees the result first.
 void big_int_copy(BigInt* a, BigInt* b)
 {
-	check_and_free(b);
+	check_and_reuse(b, a->size);
 	b->sign = a->sign;
-	b->size = a->size;
-
-	b->integer = malloc(sizeof(uint_t) * a->size);
 	if (b->integer == NULL) {
 		fprintf(stderr, "Memory allocation failed in big_int_copy.\n");
 		exit(EXIT_FAILURE);

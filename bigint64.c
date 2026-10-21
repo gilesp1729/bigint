@@ -130,15 +130,12 @@ void big_int_uadd(BigInt *a, BigInt *b,BigInt *c){
 		return;
 	}
 
-	check_and_free(c);
-
 	// a is always the larger number 
 	size_t sizeA = a->size;
 	size_t sizeB = b->size;
 	assert(sizeA >= sizeB);
 
-	c->integer = malloc(sizeof(uint_t) * sizeA);
-	c->size = sizeA;
+	check_and_reuse(c, sizeA);
 	
 	unsigned char carry = 0;
 	
@@ -194,8 +191,6 @@ void big_int_usub(BigInt *a, BigInt *b,BigInt *c){
 	// printf("\t\t\tb = ");
 	// big_int_print(b,1);
 
-	check_and_free(c);
-
 	if(big_int_compare(b,a,1) > 0){
 		// |b| > |a|
 		//printf("\t\t\t|b| > |a|\n");
@@ -211,8 +206,7 @@ void big_int_usub(BigInt *a, BigInt *b,BigInt *c){
 	//size_t sizeC = (sizeA > sizeB ? sizeA : sizeB);
 	assert(sizeA >= sizeB);
 
-	c->integer = malloc(sizeof(uint_t) * sizeA);
-	c->size = sizeA;
+	check_and_reuse(c, sizeA);
 	
 	size_t i;
 	// do it like big_int_add does - separate loops 0-sizeB and sizeB-sizeA
@@ -267,8 +261,6 @@ void big_int_mult(BigInt *a, BigInt *b,BigInt *c){
 		return;
 	}
 	
-	check_and_free(c);
-
 	// a is always the larger number 
 	size_t sizeA = a->size;
 	size_t sizeB = b->size;
@@ -278,9 +270,8 @@ void big_int_mult(BigInt *a, BigInt *b,BigInt *c){
 	
 	c->sign = a->sign ^ b->sign;
 	
-	c->integer = malloc(sizeof(uint_t) * sizeC);
+	check_and_reuse(c, sizeC);
 	memset(c->integer, 0, sizeof(uint_t) * sizeC);
-	c->size = sizeC;
 	
 	
 	for(size_t i = 0 ; i < sizeB ; ++i){	//for all elemnets of b

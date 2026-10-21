@@ -56,7 +56,7 @@ int big_int_compare(BigInt *a,BigInt *b, int modulus);
 
 void big_int_print(BigInt * a,int mode,char *caption);
 void big_int_swap(BigInt * a, BigInt * b);
-void check_and_free(BigInt* a);
+void check_and_reuse(BigInt* a, size_t req_size);
 int big_int_count_leading_zeros(BigInt* a);
 
 #endif

@@ -134,7 +134,6 @@ void test_benchmarks(void)
 		for (j = 1; j < 1000000; j++)
 		{
 			big_int_add(&digits[i], &digits[i - 1], &res);
-			big_int_destructor(&res);
 		}
 		ms[i] = clock() - start;
 	}
@@ -146,7 +145,6 @@ void test_benchmarks(void)
 		for (j = 1; j < 1000000; j++)
 		{
 			big_int_sub(&digits[i], &digits[i - 1], &res);
-			big_int_destructor(&res);
 		}
 		ms[i] = clock() - start;
 	}
@@ -158,7 +156,6 @@ void test_benchmarks(void)
 		for (j = 1; j < reps; j++)
 		{
 			big_int_mult(&digits[i], &digits[i - 1], &res);
-			big_int_destructor(&res);
 		}
 		ms[i] = clock() - start;
 	}
@@ -171,12 +168,11 @@ void test_benchmarks(void)
 		for (j = 1; j < reps; j++)
 		{
 			big_int_div(&digits[i], &digits[i - 1], &res, NULL);
-			big_int_destructor(&res);
 		}
 		ms[i] = clock() - start;
 	}
 	printf("Division: %d %d %d %d %d %d\n", ms[1], ms[2], ms[3], ms[4], ms[5], ms[6]);
-#endif
+#endif //_M_X64
 
 	getchar();
 }
@@ -184,7 +180,7 @@ void test_benchmarks(void)
 int main()
 {
 //	test_stringIO();
-	test_correctness();
-//	test_benchmarks();
+//	test_correctness();
+	test_benchmarks();
 }
 
