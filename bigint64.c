@@ -10,10 +10,7 @@
 #error This source builds on x64 only.
 #endif
 
-#define MAXVAL 0xFFFFFFFFULL 
-
 /*
-* TODO LIST:
 * Some routines declare bigints and return them in their return value.
 * They are:
 * big_int_constructor
@@ -25,17 +22,16 @@
 * big_int_from_string
 * This is OK-ish, because the bigints are never malloc/freed (only their underlying
 * integer arrays are)
-* 
-* Now all routines that return bigints through pointers (not the return value)
-* check and free the result bigint first.
-* 
+*
+* Note: all routines that return bigints through pointers (not through the return value)
+* check and reuse their return argument, reallocating if necessary. This means that
+* the destructor can be avoided in these cases.
+*
 * Need:
-* - something like big_int_copy that links the new integer[] and frees the original
-* - big_int_mult_by_uint32_t (and add, sub, ...) - possibly faster than bigint versions?
-* 
-* 
-* 
-* 
+* - big_int_add_uint_t
+* - big_int_mult_by_uint_t
+* - big_int_div_by_uint_t
+*
 */
 
 void big_int_print(BigInt *a,int mode,char *caption){

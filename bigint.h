@@ -20,8 +20,9 @@
 
 typedef struct {
 	uint_t* integer;
-	size_t size;		//no of elements in array. 
-	short sign;
+	size_t size;			// no of elements in array actually in use
+	size_t alloced_size;	// no of elements allocated (may be > size)
+	short sign;				// 1 for -ve, 0 for +ve
 } BigInt;
 
 
@@ -56,7 +57,7 @@ int big_int_compare(BigInt *a,BigInt *b, int modulus);
 
 void big_int_print(BigInt * a,int mode,char *caption);
 void big_int_swap(BigInt * a, BigInt * b);
-void check_and_reuse(BigInt* a, size_t req_size);
+int check_and_reuse(BigInt* a, size_t req_size);
 int big_int_count_leading_zeros(BigInt* a);
 
 #endif

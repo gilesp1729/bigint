@@ -30,26 +30,58 @@ int count_leading_zeros(uint_t x) {
 // If a contains a valid bigint, and it is large enough to meet the requested size,
 // reuse it. Otherwise reallocate its integer array, or allocate a new one if
 // none was present. 
-void check_and_reuse(BigInt* a, size_t req_size)
+int check_and_reuse(BigInt* a, size_t req_size)
 {
 	if (!a)
 	{
-		return;
+		return 1;	// not an error
 	}
 	else if (a->integer != NULL)
 	{
-		if (req_size <= a->size)
-			return;
-		a->integer = realloc(a->integer, req_size * sizeof(uint_t));
+		if (req_size > a->alloced_size) {
+			// Give it plenty of room
+			size_t alloc_size = max(req_size, a->alloced_size << 1);
+			uint_t* new_mem = realloc(a->integer, alloc_size * sizeof(uint_t));
+			if (!new_mem)
+				return 0;
+			a->alloced_size = alloc_size;
+			a->integer = new_mem;
+		}
 		a->size = req_size;
 		a->sign = 0;
 	}
 	else
 	{
 		a->integer = malloc(req_size * sizeof(uint_t));
-		a->size = req_size;
+		a->size = a->alloced_size = req_size;
 		a->sign = 0;
 	}
+	return 1;
+}
+
+int big_int_safe_realloc(BigInt* a, size_t new_size_words) {
+	if (!a) return 1;
+
+	// Do a lazy realloc (no need to actually if it's getting smaller)
+	// Make sure we zero out any new memory included in a->size, whther or not we actually
+	// need to realloc it.
+	if (new_size_words > a->size) {
+		if (new_size_words  > a->alloced_size) {
+			// Give it plenty of room
+			size_t alloc_size = max(new_size_words, a->alloced_size << 1);
+			uint_t* new_mem = realloc(a->integer, sizeof(uint_t) * new_size_words);
+			if (!new_mem) 
+				return 0;
+			a->alloced_size = alloc_size;
+			a->integer = new_mem;
+		}
+		size_t old_size_bytes = sizeof(uint_t) * a->size;
+		size_t new_size_bytes = sizeof(uint_t) * new_size_words;
+		memset(((uint8_t*)a->integer) + old_size_bytes, 0, new_size_bytes - old_size_bytes);
+	}
+
+	a->size = new_size_words;
+	return 1; // success
 }
 
 int big_int_count_leading_zeros(BigInt* a) {
@@ -75,45 +107,6 @@ void big_int_copy(BigInt* a, BigInt* b)
 		exit(EXIT_FAILURE);
 	}
 	memcpy(b->integer, a->integer, sizeof(uint_t) * a->size);
-}
-
-int big_int_safe_realloc(BigInt* a, size_t new_size_words) {
-	if (!a) return 0;
-
-	//printf("Realloc requested for side = %zu\n",new_size_words);
-
-#if 0
-	uint_t* new_mem = realloc(a->integer, sizeof(uint_t) * new_size_words);
-	if (!new_mem) {
-		return 0;
-	}
-
-	if (new_size_words > a->size) {
-		size_t old_size_bytes = sizeof(uint_t) * a->size;
-		size_t new_size_bytes = sizeof(uint_t) * new_size_words;
-		memset(((uint8_t*)new_mem) + old_size_bytes, 0, new_size_bytes - old_size_bytes);
-	}
-
-	a->integer = new_mem;
-
-#else // lazy realloc (no need to actually if it's getting smaller, just change the size field)
-
-	if (new_size_words > a->size) {
-		uint_t* new_mem = realloc(a->integer, sizeof(uint_t) * new_size_words);
-		if (!new_mem) {
-			return 0;
-		}
-
-		size_t old_size_bytes = sizeof(uint_t) * a->size;
-		size_t new_size_bytes = sizeof(uint_t) * new_size_words;
-		memset(((uint8_t*)new_mem) + old_size_bytes, 0, new_size_bytes - old_size_bytes);
-		a->integer = new_mem;
-	}
-
-#endif
-	a->size = new_size_words;
-
-	return 1; // success
 }
 
 void big_int_swap(BigInt* a, BigInt* b) {
@@ -210,6 +203,7 @@ BigInt big_int_constructor(short sign, size_t size, ...) {
 	}
 	number.sign = sign;
 	number.size = size;
+	number.alloced_size = size;
 	return number;
 }
 
@@ -220,6 +214,7 @@ BigInt big_int_from_string(char* string)
 	short sign = 1;
 	int	base = 10;
 	BigInt a, bigbase;
+	BigInt temp = { 0, };
 
 	// Check for minus sign
 	if (string[0] == '-')
@@ -239,7 +234,6 @@ BigInt big_int_from_string(char* string)
 	a = big_int_constructor(0, 1, 0);
 	for (size_t i = start; i < lenstr; i++)
 	{
-		BigInt temp = { 0, };
 		BigInt bigdigit = { 0, };
 		big_int_mult(&a, &bigbase, &temp);
 
@@ -251,12 +245,12 @@ BigInt big_int_from_string(char* string)
 			ch = ch - 'A' + 10;
 		else if (ch >= '0')
 			ch -= '0';
-		bigdigit = big_int_from_uint_t((uint_t)ch);
+		bigdigit = big_int_from_uint_t((uint_t)ch);		// TODO: this is wasteful - bigdigit gets created and destroyed every time
 		big_int_add(&temp, &bigdigit, &a);
-		big_int_destructor(&temp);
 		big_int_destructor(&bigdigit);
 	}
 	big_int_destructor(&bigbase);
+	big_int_destructor(&temp);
 	return a;
 }
 
@@ -386,14 +380,10 @@ void big_int_bit_shift_l(BigInt* a, size_t s) {
 
 	// If carry_out is non-zero, add one more word
 	if (carry_out) {
-		uint_t* new_data = (uint_t*)realloc(a->integer, sizeof(uint_t) * (old_size + 1));
-		if (!new_data) {
+		if (!big_int_safe_realloc(a, old_size + 1)) {
 			fprintf(stderr, "Error: realloc failed\n");
 			exit(EXIT_FAILURE);
 		}
-		a->integer = new_data;
-		a->integer[old_size] = 0;  // New top word
-		a->size += 1;
 		old_size += 1;
 	}
 

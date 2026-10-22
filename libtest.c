@@ -180,7 +180,7 @@ void test_benchmarks(void)
 int main()
 {
 //	test_stringIO();
-//	test_correctness();
+	test_correctness();
 	test_benchmarks();
 }
 
