@@ -21,6 +21,9 @@
   <ItemGroup>
     <ClCompile Include="div64.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="uint128.hpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
