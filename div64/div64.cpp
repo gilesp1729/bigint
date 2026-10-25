@@ -135,7 +135,7 @@ int mp_div(uint_t* q, uint_t* n, size_t n_size, const uint_t* d, size_t m_size) 
         for (size_t i = 0; i < m_size; i++) 
         {
             uint128_t prod = q_hat * vn[i];            // Need a 128x64 multiply op - casting up will work but is wasteful of multiplies
-            uint128_t sub = (uint128_t)un[idx + i] - borrow - prod.low);
+            uint128_t sub = (uint128_t)un[idx + i] - borrow - prod.low;
             un[idx + i] = sub.low;
             borrow = (prod >> 64) - (sub >> 63); // Handle borrow propagation safely
         }

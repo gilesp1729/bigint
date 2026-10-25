@@ -62,14 +62,50 @@ public:
         return r;
     }
 
-    // TODO: <<, >> operators and maybe ++ += 
+    // TODO: >> operators and maybe ++ += 
     // TODO: 128x64 multiply, simplified form of the above 128x128
 
+    uint128_t operator<<(int shift)
+    {
+        if (shift == 64)
+        {
+            high = low;
+            low = 0;
+            return *this;
+        }
+        // The shift must be 64 or less
+        uint_t carry = 0;
+        uint_t current = low;
+        low = current << shift;
+        carry = current >> (64 - shift); 
+        high = high << shift | carry;
+        return *this;
+    }
 
+    uint128_t operator>>(int shift)
+    {
+        if (shift == 64)
+        {
+            low = high;
+            high = 0;
+            return *this;
+        }
+        // The shift must be 64 or less
+        uint_t current = low >> shift;
+        uint_t carry = high << (64 - shift);
+        low = current | carry;
+        high = high >> shift;
+        return *this;
+    }
 
     bool operator==(uint128_t b)
     {
         return low == b.low && high == b.high;
+    }
+
+    bool operator!=(uint128_t b)
+    {
+        return low != b.low || high != b.high;
     }
 
     bool operator<(uint128_t b)
