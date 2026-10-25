@@ -315,188 +315,28 @@ void big_int_mult(BigInt *a, BigInt *b,BigInt *c){
 	}
 }
 
-// These routines need completely rewriting for x64. Don't hold your breath.
-#ifndef _M_X64
 
-int big_int_div(BigInt *u, BigInt *v,BigInt *q, BigInt *r){
-	
-	//Knuth-D implementation based on https://github.com/hcs0/Hackers-Delight/
-	
-	/*
-    1. Space q for the quotient, m - n + 1 words (at least one).
-   	2. Space r for the remainder (optional), n words.
-   	3. The dividend u, m words, m >= 1.
-   	4. The divisor v, n words, n >= 2.
-   	*/
-	
+int big_int_div(BigInt *u, BigInt *v,BigInt *q, BigInt *r)
+{
+	int rc;
 
-	uint64_t BASE = 0x100000000;		// number base (2^32)
-	uint32_t *un,*vn;			//normalised u,v
-	
-	uint64_t q_hat;
-	uint64_t r_hat;
-	uint64_t p;				//product of 2 digits(chunks) 
-	
-	size_t m = u->size;
-	size_t n = v->size;
-
-	check_and_free(q);
-	check_and_free(r);
-
-	if(n > m){
-		*q = big_int_from_uint32_t(0);
-		if (r)
-			big_int_copy(u, r);	
-		return 0;
+	// Allocate q and r to be big enough (we'll trim them later,
+	// as mp_div doesn't return their true sizes)
+	// Quotient size mirrors calc in mp_dev (TODO: Fix this)
+	check_and_reuse(q, u->size - v->size + 1);
+	if (r)
+	{
+		check_and_reuse(r, v->size);
+		rc = mp_div(u->integer, u->size, v->integer, v->size, q->integer, r->integer);
 	}
-	
-	size_t sizeQ = m - n + 1;
-	size_t sizeR = n;
-	
-	long long t, k;
-	unsigned int i;
-	int j;
-
-	q->integer = malloc(sizeof(uint32_t) * sizeQ);
-	q->size = sizeQ;
-	
-	if(r){
-		r->integer = malloc(sizeof(uint32_t) * sizeR);
-		r->size = sizeR;
-	}
-	
-	if (m < n || n <= 0 || v->integer[n - 1] == 0) {
-		free(q->integer);
-		if (r) free(r->integer);
-		return 1;
-	}
-	
-	//easy casse hard coded
-	if(n == 1){
-		k = 0;
-		for(j = m - 1 ; j >= 0 ; --j){
-			q->integer[j] = (uint32_t)((k * BASE + u->integer[j])/v->integer[0]);
-			k = (k * BASE + u->integer[j]) - q->integer[j]*v->integer[0];
-		}
-		if(r){
-			r->integer[0] = (uint32_t)k;
-		}
-		return 0;
-	}
-	
-	
-	//normalising v
-	int s = big_int_count_leading_zeros(v);
-	
-	vn = (uint32_t*)malloc(sizeof(uint32_t) * n);
-	un = (uint32_t*)malloc(sizeof(uint32_t) * (m + 1));
-	
-	for(i = n - 1; i > 0 ; i --){
-		uint32_t shifted = v->integer[i] << s;
-		uint32_t carried = (uint64_t)v->integer[i-1] >> (32 - s);
-		
-		vn[i] = shifted | carried;
-	}
-	vn[0] = v->integer[0] << s;
-	
-	
-	
-	//normalising u
-	un[m] = (uint64_t)u->integer[m-1] >> (32 - s);
-	
-	for(i = m - 1 ; i > 0 ; --i){
-		uint32_t shifted = u->integer[i] << s;
-		uint32_t carried = (uint64_t)u->integer[i-1] >> (32 - s);
-		
-		un[i] = shifted | carried;
-	}
-	un[0] = u->integer[0] << s;
-	
-	//main loop
-	for(j = m-n; j >= 0; j--){ //for each quotient digit
-		//estimate qhat of q[j] using top 2 digits of dividend(u)
-		uint64_t numerator = ((uint64_t)un[j+n] << 32) | un[j+n-1]; //top 2 digits of u(chunks)
-		q_hat = numerator / vn[n-1];				//top 1 digit of v
-		r_hat = numerator % vn[n-1];
-		
-		
-		//refine qhat
-		while(q_hat >= BASE || (q_hat * vn[n-2]) > ((r_hat << 32) + un[j+n-2])){
-			q_hat = q_hat - 1;
-			r_hat = r_hat + vn[n-1];
-			if(r_hat >= BASE){
-				break;
-			}
-		}
-	
-		
-		//main procedure un[j..... j+n] - vn * qhat
-		k = 0;
-		for(i = 0 ; i < n  ; i++){
-		
-			p = q_hat * vn[i];
-			t = (uint64_t)un[j+i] - k - (p & MAXVAL);
-			un[j+i] = (uint32_t)(t & MAXVAL);
-			// Borrow = 1 if upper 32 bits are non-zero, else 0
-			k = (p >> 32) - (t >> 32);
-
-		}
-		t = (uint64_t)un[j+n] - k;
-		un[j+n] = (uint32_t)(t & MAXVAL);
-		
-		
-		//store q
-		q->integer[j] = (uint32_t)(q_hat & MAXVAL);
-		
-		//subtraction underflowed implied q_hat is large or overestimated
-		if ((int64_t)t < 0) {
-			q->integer[j] -= 1;
-			
-			//add back vn to current slice of un to restore remainder for next iter
-			uint64_t carry = 0;
-			for (i = 0; i < n; i++) {
-				uint64_t sum = (uint64_t)un[j+i] + vn[i] + carry;
-			 	un[j+i] = (uint32_t)sum;
-				carry = sum >> 32;
-			}
-			un[j+n] += (uint32_t)carry;
-		}
-	}
-	//main loop done
-	
-	if(r){
-		//unnormalise(reverse what we did) to remainder
-		for(i = 0 ; i < n - 1 ; ++i){
-			uint32_t shifted = (un[i] >> s);
-			uint32_t carried = (uint64_t)un[i+1] << (32-s);
-			
-			r->integer[i] = shifted | carried;
-		}
-		r->integer[n-1] = un[n-1] >> s;
-	
-		i = sizeR-1;
-		while( i > 0 && r->integer[i] == 0x0){
-			i--;
-		}
-		if (!big_int_safe_realloc(r, i+1)) {
-			fprintf(stderr, "Error: Failed to reallocate BigInt to size %zu words\n", (long unsigned int)i+1);
-			exit(EXIT_FAILURE);
-		}
+	else
+	{
+		rc = mp_div(u->integer, u->size, v->integer, v->size, q->integer, NULL);
 	}
 
-	i = sizeQ-1;
-	while( i > 0 && q->integer[i] == 0x0){
-		i--;
-	}
-	if (!big_int_safe_realloc(q, i+1)) {
-		fprintf(stderr, "Error: Failed to reallocate BigInt to size %zu words\n", (long unsigned int)i+1);
-		exit(EXIT_FAILURE);
-	}
-	
-	free(un);
-	free(vn);
-	return 0;
-	
+	//TODO: trim leading zero words? NO, better to return the true sizes.
+
+	return rc;
 }
 
 int big_int_mod(BigInt *a,BigInt *b, BigInt * c){
@@ -506,4 +346,3 @@ int big_int_mod(BigInt *a,BigInt *b, BigInt * c){
 	return res;
 }
 
-#endif // !_M_X64

@@ -4,20 +4,25 @@
 #include <string.h>
 #include "uint128.hpp"
 
-
+extern "C"
+{
+    int mp_div(uint_t* n, size_t n_size, const uint_t* d, size_t m_size, uint_t* q, uint_t* r);
+}
 
 /**
  * Multiprecision Division (Knuth's Algorithm D)
  * Computes Q = N / D and updates N to be the Remainder R = N % D.
  *
- * @param q  Array to store the quotient (size at least n - m + 1)
- * @param n  Array containing the dividend (size n_size, modified to hold remainder)
+ * @param n  Array containing the dividend (size n_size)
  * @param n_size Size of the dividend array
  * @param d  Array containing the divisor (size m_size)
  * @param m_size Size of the divisor array
+ * @param q  Array to store the quotient (size at least n - m + 1)
+ * @param r  Array to store the remainder (size at least m) or NULL if not used
  * @return 0 on success, -1 on division by zero
  */
-int mp_div(uint_t* q, uint_t* n, size_t n_size, const uint_t* d, size_t m_size) {
+int mp_div(uint_t* n, size_t n_size, const uint_t* d, size_t m_size, uint_t* q, uint_t *r) 
+{
     // Strip leading zeros from the divisor
     while (m_size > 0 && d[m_size - 1] == 0) {
         m_size--;
@@ -32,6 +37,8 @@ int mp_div(uint_t* q, uint_t* n, size_t n_size, const uint_t* d, size_t m_size) 
     // If dividend is smaller than divisor, quotient is 0 and remainder is dividend
     if (n_size < m_size) {
         memset(q, 0, (n_size == 0 ? 1 : n_size) * sizeof(uint_t));
+        if (r)
+            memcpy(r, n, m_size * sizeof(uint_t));
         return 0;
     }
 
@@ -52,8 +59,11 @@ int mp_div(uint_t* q, uint_t* n, size_t n_size, const uint_t* d, size_t m_size) 
             q[i - 1] = _udiv128(rem, n[i - 1], d0, &rem);
         }
 #endif
-        n[0] = rem;
-        memset(n + 1, 0, (n_size - 1) * sizeof(uint_t));
+        if (r)
+        {
+            r[0] = rem;
+            memset(r + 1, 0, (m_size - 1) * sizeof(uint_t));
+        }
         return 0;
     }
 
@@ -178,53 +188,53 @@ int mp_div(uint_t* q, uint_t* n, size_t n_size, const uint_t* d, size_t m_size) 
 #endif
     }
 
-    // Step D8: Denormalize the remainder
-    carry = 0;
-    for (size_t i = m_size; i > 0; i--) {
-        uint_t val = un[i - 1];
-        n[i - 1] = (val >> shift) | (shift ? (carry << (64 - shift)) : 0);
-        carry = val;
+    // Step D8: Denormalize the remainder (leave original dividend intact)
+    if (r)
+    {
+        memcpy(r, n, m_size * sizeof(uint_t));
+        carry = 0;
+        for (size_t i = m_size; i > 0; i--) {
+            uint_t val = un[i - 1];
+            r[i - 1] = (val >> shift) | (shift ? (carry << (64 - shift)) : 0);
+            carry = val;
+        }
     }
-    memset(n + m_size, 0, (n_size - m_size) * sizeof(uint_t));
 
-    // TODO: Return somehow the quotient and remainder sizes? (remainder <= divisor, so could be same size)
     free(vn);
     free(un);
     return 0;
 }
 
+#if 0 // Define this for testing only
+
 int main()
 {
-    // mp_div(uint_t *q, uint_t *n, size_t n_size, const uint_t *d, size_t m_size)
-
-    uint_t divisor[10], dividend[20], quotient[10];   // remainder gets left in the dividend array
+    uint_t divisor[10], dividend[20], quotient[10], remainder[10];
 
     // Divide a small number by 10
     printf("64-bit Divide Test\n");
     divisor[0] = 10;
     dividend[0] = 12345678;
-    mp_div(quotient, dividend, 1, divisor, 1);
-    printf("1/1: %lld %lld\n", quotient[0], dividend[0]);
+    mp_div(dividend, 1, divisor, 1, quotient, remainder);
+    printf("1/1: %lld %lld\n", quotient[0], remainder[0]);
 
     // Divide 10**30 by 10
-    // expect 10**29 = 0x1431e0fae_6d7217caa0000000
+    // expect 10**29 = 0x1431e0fae_6d7217caa0000000, no remainder (pass NULL)
     // 10**30 = 0xc9f2c9cd0_4674edea40000000
     dividend[0] = 0x4674edea40000000;
     dividend[1] = 0xc9f2c9cd0;
-    quotient[0] = 0;
-    quotient[1] = 0;
-    mp_div(quotient, dividend, 2, divisor, 1);
-    printf("2/1: %016llx %016llx %lld\n", quotient[1], quotient[0], dividend[0]);
+    mp_div(dividend, 2, divisor, 1, quotient, NULL);
+    printf("2/1: %016llx %016llx\n", quotient[1], quotient[0]);
 
-    // Divide 10**30 by 10**29, expect 10
-    dividend[0] = 0x4674edea40000000;
+    // Divide (10**30 + 5) by 10**29, expect q = 10, r = 5
+    dividend[0] = 0x4674edea40000005;
     dividend[1] = 0xc9f2c9cd0;
     divisor[0] = 0x6d7217caa0000000;
     divisor[1] = 0x1431e0fae;
-    quotient[0] = 0;  // don't forget to zero out stale data (it doesn't return the quot/rem sizes)
-    quotient[1] = 0;
-    mp_div(quotient, dividend, 2, divisor, 2);
-    printf("2/2: %016llx %016llx %lld\n", quotient[1], quotient[0], dividend[0]);
+    mp_div(dividend, 2, divisor, 2, quotient, remainder);
+    printf("2/2: %016llx %016llx %lld\n", quotient[1], quotient[0], remainder[0]);
 
     getchar();
 }
+
+#endif // 0

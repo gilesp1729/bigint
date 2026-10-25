@@ -75,14 +75,16 @@ void test_correctness()
 	big_int_destructor(&res);
 	big_int_destructor(&cmp);
 
-#ifndef _M_X64
 	cmp = big_int_from_string("10000000000000000000000000000000000000000000000000000000000000000000000");
+	big_int_print(&t100, 1, "Dividend");
+	big_int_print(&t30, 1, "Divisor");
 	big_int_div(&t100, &t30, &res, NULL);
+	big_int_print(&cmp, 1, "Expected result");
+	big_int_print(&res, 1, "Actual result");
 	printf("Division: %d\n", big_int_compare(&res, &cmp, 1));
 	big_int_destructor(&res);
 	big_int_destructor(&cmp);
 	big_int_destructor(&tst);
-#endif
 
 	temp = big_int_from_string("0xFFFFFFFFFFFFFFFF0000000000000000");
 	cmp =  big_int_from_string("0xFFFFFFFFFFFFFFFF000000000000000000");
@@ -181,6 +183,6 @@ int main()
 {
 //	test_stringIO();
 	test_correctness();
-	test_benchmarks();
+//	test_benchmarks();
 }
 

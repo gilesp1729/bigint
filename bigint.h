@@ -57,7 +57,12 @@ int big_int_compare(BigInt *a,BigInt *b, int modulus);
 
 void big_int_print(BigInt * a,int mode,char *caption);
 void big_int_swap(BigInt * a, BigInt * b);
+
+// internal routines
 int check_and_reuse(BigInt* a, size_t req_size);
 int big_int_count_leading_zeros(BigInt* a);
+#ifdef _M_X64
+int mp_div(uint_t* n, size_t n_size, const uint_t* d, size_t m_size, uint_t* q, uint_t* r);
+#endif
 
 #endif
