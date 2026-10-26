@@ -62,7 +62,15 @@ void big_int_swap(BigInt * a, BigInt * b);
 int check_and_reuse(BigInt* a, size_t req_size);
 int big_int_count_leading_zeros(BigInt* a);
 #ifdef _M_X64
-int mp_div(uint_t* n, size_t n_size, const uint_t* d, size_t m_size, uint_t* q, uint_t* r);
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+	int mp_div(BigInt* dividend, BigInt* divisor, BigInt* quotient, BigInt* remainder);
+	//int mp_div(uint_t* n, size_t n_size, const uint_t* d, size_t m_size, uint_t* q, uint_t* r);
+#ifdef __cplusplus
+}
+#endif
 #endif
 
-#endif
+#endif //BIGINT_H

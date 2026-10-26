@@ -27,7 +27,7 @@
     <ClCompile Include="bigint-common.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="div64\div64.cpp">
+    <ClCompile Include="div64.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -35,7 +35,7 @@
     <ClInclude Include="bigint.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="div64\uint128.hpp">
+    <ClInclude Include="uint128.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

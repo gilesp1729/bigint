@@ -273,10 +273,19 @@ void big_int_mult(BigInt *a, BigInt *b,BigInt *c){
 		size_t j;
 		for(j = i ; j < sizeA + i ;  j++){//for all elements of a
 			
+#if 0 // original 32-bit code
 			uint64_t product = (uint64_t)a->integer[j-i] * (uint64_t)b->integer[i];
 			uint64_t sum = (uint64_t)c->integer[j] + product + carry;		// does not overflow, believe it or not.
 			c->integer[j] = (uint32_t)(sum & MAXVAL);
 			carry = (uint32_t)(sum >> 32);
+#else
+			// TODO: What we did for 64-bit using intrinsics.
+			lo_prod = _mulx_u32( 
+
+
+
+
+#endif
 		}
 
 		if(carry){
@@ -294,6 +303,9 @@ void big_int_mult(BigInt *a, BigInt *b,BigInt *c){
 		exit(EXIT_FAILURE);
 	}
 }
+
+
+// TODO: What about the signs? This alg is only for unsigned..
 
 int big_int_div(BigInt *u, BigInt *v,BigInt *q, BigInt *r){
 	

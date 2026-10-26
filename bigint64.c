@@ -1,10 +1,10 @@
-#include "bigint.h"
 #include <stdint.h>
 #include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
 #include <intrin.h>
 #include <assert.h>
+#include "bigint.h"
 
 #ifndef _M_X64
 #error This source builds on x64 only.
@@ -74,11 +74,12 @@ void big_int_print(BigInt *a,int mode,char *caption){
 		for(int i = (a->size)-1; i >=0 ; --i)
 			printf("%016I64X",a->integer[i]);
 		break;
-#if 0 // ############ TEMP until we have a div ###########
+
 	case 3:
 		// Decimal
 		{
-			char* revbuf = malloc(a->size * 16);	// should be big enough (double the hex size)
+			size_t bufsiz = 1024;
+			char* revbuf = malloc(bufsiz);			// start with a power of 2 and realloc as needed
 			BigInt c = { 0, };
 			BigInt ten = big_int_from_uint_t(10);
 			BigInt q = { 0, };						// quotient and remainder
@@ -87,9 +88,14 @@ void big_int_print(BigInt *a,int mode,char *caption){
 			big_int_copy(a, &c);					// don't clobber the input
 			while (!big_int_is_zero(&c))
 			{
-				big_int_div(&c, &ten, &q, &r);		// TODO: this will free q/r integers, but watch out for inconsistencies elsewhere. Need div_by_uint_t here.
+				if (i == bufsiz)	
+				{
+					bufsiz <<= 1;					// next power of 2	
+					revbuf = realloc(revbuf, bufsiz);
+				}
+				big_int_div(&c, &ten, &q, &r);
 				revbuf[i++] = r.integer[0] + '0';
-				big_int_copy(&q, &c);				// Can be faster as q not rrequired aagain, but see above
+				big_int_copy(&q, &c);
 			}
 			// Print reversed digits forward. Handle zero specially.
 			if (i == 0)
@@ -106,7 +112,6 @@ void big_int_print(BigInt *a,int mode,char *caption){
 			big_int_destructor(&ten);
 	}
 		break;
-#endif // 0 ########### TEMP ###########
 	}
 	printf("\n");
 }
@@ -325,14 +330,8 @@ int big_int_div(BigInt *u, BigInt *v,BigInt *q, BigInt *r)
 	// Quotient size mirrors calc in mp_dev (TODO: Fix this)
 	check_and_reuse(q, u->size - v->size + 1);
 	if (r)
-	{
 		check_and_reuse(r, v->size);
-		rc = mp_div(u->integer, u->size, v->integer, v->size, q->integer, r->integer);
-	}
-	else
-	{
-		rc = mp_div(u->integer, u->size, v->integer, v->size, q->integer, NULL);
-	}
+	rc = mp_div(u, v, q, r);
 
 	//TODO: trim leading zero words? NO, better to return the true sizes.
 

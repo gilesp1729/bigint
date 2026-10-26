@@ -12,7 +12,6 @@ char* ten_to_1500_dec_str =
 char* ten_to_500_hex_str =
 "0x1f365fec9370d2baee34b150720878ea52ccba5e661e2f4fbda27e2b43bc65e952814f46187bf47646f960e57615b1b14565571de604d10b58df55762cd1b1d82d412b739baf43048fbf621de5493a15049a5ce8703d84990f0bcf9a1b88e0179c93273fff1641f92f53e9ccc53f7883cb08bdee813899aed8283c15eebd4372dad168bab87080f7d40d71a207f3ab7b6b100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
 
-#ifndef _M_X64
 void test_stringIO(void)
 {
 	BigInt ten_to_3000 = big_int_from_string(ten_to_3000_hex_str);
@@ -36,7 +35,6 @@ void test_stringIO(void)
 	getchar();  // so we can see the output
 }
 
-#endif
 void test_correctness()
 {
 	BigInt t30 = big_int_from_string("1000000000000000000000000000000");
@@ -76,15 +74,19 @@ void test_correctness()
 	big_int_destructor(&cmp);
 
 	cmp = big_int_from_string("10000000000000000000000000000000000000000000000000000000000000000000000");
+	big_int_div(&t100, &t30, &res, &temp);
+#if 0
 	big_int_print(&t100, 1, "Dividend");
 	big_int_print(&t30, 1, "Divisor");
-	big_int_div(&t100, &t30, &res, NULL);
-	big_int_print(&cmp, 1, "Expected result");
-	big_int_print(&res, 1, "Actual result");
+	big_int_print(&cmp, 1, "Expected quotient");
+	big_int_print(&res, 1, "Actual quotient");
+	big_int_print(&temp, 1, "Remainder");
+#endif
 	printf("Division: %d\n", big_int_compare(&res, &cmp, 1));
 	big_int_destructor(&res);
 	big_int_destructor(&cmp);
 	big_int_destructor(&tst);
+	big_int_destructor(&temp);
 
 	temp = big_int_from_string("0xFFFFFFFFFFFFFFFF0000000000000000");
 	cmp =  big_int_from_string("0xFFFFFFFFFFFFFFFF000000000000000000");
@@ -129,6 +131,7 @@ void test_benchmarks(void)
 
 	//Count milliseconds for reps, operating each BigInt with the previous in size order.
 	printf("Digits: 10  30  100  500 1500 3000\n");
+#if 0
 
 	for (i = 1; i < NUM_DIGITS; i++)
 	{
@@ -151,6 +154,7 @@ void test_benchmarks(void)
 		ms[i] = clock() - start;
 	}
 	printf("Subtraction: %d %d %d %d %d %d\n", ms[1], ms[2], ms[3], ms[4], ms[5], ms[6]);
+#endif
 
 	for (i = 1; i < NUM_DIGITS; i++)
 	{
@@ -162,8 +166,7 @@ void test_benchmarks(void)
 		ms[i] = clock() - start;
 	}
 	printf("Multiplication: %d %d %d %d %d %d\n", ms[1], ms[2], ms[3], ms[4], ms[5], ms[6]);
-
-#ifndef _M_X64
+#if 0
 	for (i = 1; i < NUM_DIGITS; i++)
 	{
 		start = clock();
@@ -174,7 +177,7 @@ void test_benchmarks(void)
 		ms[i] = clock() - start;
 	}
 	printf("Division: %d %d %d %d %d %d\n", ms[1], ms[2], ms[3], ms[4], ms[5], ms[6]);
-#endif //_M_X64
+#endif
 
 	getchar();
 }
@@ -182,7 +185,7 @@ void test_benchmarks(void)
 int main()
 {
 //	test_stringIO();
-	test_correctness();
-//	test_benchmarks();
+//	test_correctness();
+	test_benchmarks();
 }
 

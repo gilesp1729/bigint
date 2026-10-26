@@ -1,18 +1,15 @@
-#include <stdio.h>    // just fo rthe test main
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
 #include "uint128.hpp"
-
-extern "C"
-{
-    int mp_div(uint_t* n, size_t n_size, const uint_t* d, size_t m_size, uint_t* q, uint_t* r);
-}
+#include "bigint.h"
 
 /**
  * Multiprecision Division (Knuth's Algorithm D)
  * Computes Q = N / D and updates N to be the Remainder R = N % D.
  *
+// Pass bigints here instead of arrays, so correct sizes can be returned.
+ * Params derived from the bigints:
  * @param n  Array containing the dividend (size n_size)
  * @param n_size Size of the dividend array
  * @param d  Array containing the divisor (size m_size)
@@ -21,20 +18,32 @@ extern "C"
  * @param r  Array to store the remainder (size at least m) or NULL if not used
  * @return 0 on success, -1 on division by zero
  */
-int mp_div(uint_t* n, size_t n_size, const uint_t* d, size_t m_size, uint_t* q, uint_t *r) 
+int mp_div(BigInt* dividend,  BigInt *divisor, BigInt *quotient, BigInt* remainder) 
 {
-    // Strip leading zeros from the divisor
+    // Copy the sizes. 
+    uint_t* n = dividend->integer;
+    size_t n_size = dividend->size;
+    uint_t* d = divisor->integer;
+    size_t m_size = divisor->size;
+    uint_t* q = quotient->integer;
+    uint_t* r = NULL;
+    if (remainder)
+        r = remainder->integer;
+
+#if 0 // Not needed, we assume all bigints are well-formed
+    // Strip leading zeros from the divisor as a sanity check
     while (m_size > 0 && d[m_size - 1] == 0) {
         m_size--;
     }
     if (m_size == 0) return -1; // Division by zero
 
-    // Strip leading zeros from the dividend
     while (n_size > 0 && n[n_size - 1] == 0) {
         n_size--;
     }
+#endif
 
     // If dividend is smaller than divisor, quotient is 0 and remainder is dividend
+    // Catches the case n_size = 0 (which is not well formed, but you know what we mean)
     if (n_size < m_size) {
         memset(q, 0, (n_size == 0 ? 1 : n_size) * sizeof(uint_t));
         if (r)
@@ -59,10 +68,16 @@ int mp_div(uint_t* n, size_t n_size, const uint_t* d, size_t m_size, uint_t* q, 
             q[i - 1] = _udiv128(rem, n[i - 1], d0, &rem);
         }
 #endif
+        // Trim leading zeros, leaving a minimum size of 1.
+        while (q_size > 1 && q[q_size - 1] == 0) {
+            q_size--;
+        }
+        quotient->size = q_size;
         if (r)
         {
             r[0] = rem;
-            memset(r + 1, 0, (m_size - 1) * sizeof(uint_t));
+            //memset(r + 1, 0, (m_size - 1) * sizeof(uint_t));
+            remainder->size = 1;
         }
         return 0;
     }
@@ -202,39 +217,22 @@ int mp_div(uint_t* n, size_t n_size, const uint_t* d, size_t m_size, uint_t* q, 
 
     free(vn);
     free(un);
+
+    // Reset correct sizes for quotient and remainder by stripping leading zero limbs
+    // Quotient cannot be zero (that case is trapped at top) and remainder must
+    // be returned as a single liumb even if it's zero.
+    while (q_size > 1 && q[q_size - 1] == 0) {
+        q_size--;
+    }
+    quotient->size = q_size;
+    if (r)
+    {
+        while (m_size > 1 && r[m_size - 1] == 0) {
+            m_size--;
+        }
+        remainder->size = m_size;
+    }
+
     return 0;
 }
 
-#if 0 // Define this for testing only
-
-int main()
-{
-    uint_t divisor[10], dividend[20], quotient[10], remainder[10];
-
-    // Divide a small number by 10
-    printf("64-bit Divide Test\n");
-    divisor[0] = 10;
-    dividend[0] = 12345678;
-    mp_div(dividend, 1, divisor, 1, quotient, remainder);
-    printf("1/1: %lld %lld\n", quotient[0], remainder[0]);
-
-    // Divide 10**30 by 10
-    // expect 10**29 = 0x1431e0fae_6d7217caa0000000, no remainder (pass NULL)
-    // 10**30 = 0xc9f2c9cd0_4674edea40000000
-    dividend[0] = 0x4674edea40000000;
-    dividend[1] = 0xc9f2c9cd0;
-    mp_div(dividend, 2, divisor, 1, quotient, NULL);
-    printf("2/1: %016llx %016llx\n", quotient[1], quotient[0]);
-
-    // Divide (10**30 + 5) by 10**29, expect q = 10, r = 5
-    dividend[0] = 0x4674edea40000005;
-    dividend[1] = 0xc9f2c9cd0;
-    divisor[0] = 0x6d7217caa0000000;
-    divisor[1] = 0x1431e0fae;
-    mp_div(dividend, 2, divisor, 2, quotient, remainder);
-    printf("2/2: %016llx %016llx %lld\n", quotient[1], quotient[0], remainder[0]);
-
-    getchar();
-}
-
-#endif // 0
