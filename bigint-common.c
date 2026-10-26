@@ -27,11 +27,35 @@ int count_leading_zeros(uint_t x) {
 	return count;
 }
 
+int reuse(BigInt* a, size_t req_size)
+{
+	// Give it plenty of room
+	size_t alloc_size = max(req_size, a->alloced_size << 1);
+	uint_t* new_mem = realloc(a->integer, alloc_size * sizeof(uint_t));
+	if (!new_mem)
+		return 0;
+	a->alloced_size = alloc_size;
+	a->integer = new_mem;
+	return 1;
+}
+
+int new_alloc(BigInt* a, size_t req_size)
+{
+	a->integer = malloc(req_size * sizeof(uint_t));
+	if (!a->integer)
+		return 0;
+	a->size = a->alloced_size = req_size;
+	a->sign = 0;
+	return 1;
+}
+
 // If a contains a valid bigint, and it is large enough to meet the requested size,
 // reuse it. Otherwise reallocate its integer array, or allocate a new one if
 // none was present. 
-int check_and_reuse(BigInt* a, size_t req_size)
+__forceinline int check_and_reuse(BigInt* a, size_t req_size)
 {
+	int rc = 1;
+
 	if (!a)
 	{
 		return 1;	// not an error
@@ -39,24 +63,16 @@ int check_and_reuse(BigInt* a, size_t req_size)
 	else if (a->integer != NULL)
 	{
 		if (req_size > a->alloced_size) {
-			// Give it plenty of room
-			size_t alloc_size = max(req_size, a->alloced_size << 1);
-			uint_t* new_mem = realloc(a->integer, alloc_size * sizeof(uint_t));
-			if (!new_mem)
-				return 0;
-			a->alloced_size = alloc_size;
-			a->integer = new_mem;
+			rc = reuse(a, req_size);
 		}
 		a->size = req_size;
 		a->sign = 0;
 	}
 	else
 	{
-		a->integer = malloc(req_size * sizeof(uint_t));
-		a->size = a->alloced_size = req_size;
-		a->sign = 0;
+		rc = new_alloc(a, req_size);
 	}
-	return 1;
+	return rc;
 }
 
 int big_int_safe_realloc(BigInt* a, size_t new_size_words) {

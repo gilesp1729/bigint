@@ -59,7 +59,7 @@ void big_int_print(BigInt * a,int mode,char *caption);
 void big_int_swap(BigInt * a, BigInt * b);
 
 // internal routines
-int check_and_reuse(BigInt* a, size_t req_size);
+__forceinline int check_and_reuse(BigInt* a, size_t req_size);
 int big_int_count_leading_zeros(BigInt* a);
 #ifdef _M_X64
 #ifdef __cplusplus

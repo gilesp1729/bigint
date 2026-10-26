@@ -36,6 +36,7 @@ public:
 
     uint128_t operator*(uint128_t b)
     {
+        // Multiply 128x128
         // we want the low 128 bits of:
         // (a.low + 2^64 a.high) * (b.low + 2^64 b.high)
         //
@@ -62,8 +63,28 @@ public:
         return r;
     }
 
-    // TODO: >> operators and maybe ++ += 
-    // TODO: 128x64 multiply, simplified form of the above 128x128
+    uint128_t operator*(uint_t b)
+    {
+        // Multiply 128x64, to save a multiply over the above case
+        // we want the low 128 bits of:
+        // (a.low + 2^64 a.high) * b
+        //
+        // r.low  = lo64(a.low * b)     (a = this)
+        // r.high = hi64(a.low * b)
+        //        + lo64(a.high * b)        (mod 2^64)
+
+        uint128_t r;
+
+        uint_t p0_hi;
+        r.low = _umul128(low, b, &p0_hi);
+
+        uint_t t2_hi;
+        uint_t t2_lo = _umul128(high, b, &t2_hi);
+
+        r.high = p0_hi + t2_lo;
+
+        return r;
+    }
 
     uint128_t operator<<(int shift)
     {

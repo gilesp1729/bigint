@@ -159,7 +159,7 @@ int mp_div(BigInt* dividend,  BigInt *divisor, BigInt *quotient, BigInt* remaind
         uint128_t borrow = 0;
         for (size_t i = 0; i < m_size; i++) 
         {
-            uint128_t prod = q_hat * vn[i];            // Need a 128x64 multiply op - casting up will work but is wasteful of multiplies
+            uint128_t prod = q_hat * vn[i]; 
             uint128_t sub = (uint128_t)un[idx + i] - borrow - prod.low;
             un[idx + i] = sub.low;
             borrow = (prod >> 64) - (sub >> 63); // Handle borrow propagation safely

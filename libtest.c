@@ -131,7 +131,6 @@ void test_benchmarks(void)
 
 	//Count milliseconds for reps, operating each BigInt with the previous in size order.
 	printf("Digits: 10  30  100  500 1500 3000\n");
-#if 0
 
 	for (i = 1; i < NUM_DIGITS; i++)
 	{
@@ -154,7 +153,6 @@ void test_benchmarks(void)
 		ms[i] = clock() - start;
 	}
 	printf("Subtraction: %d %d %d %d %d %d\n", ms[1], ms[2], ms[3], ms[4], ms[5], ms[6]);
-#endif
 
 	for (i = 1; i < NUM_DIGITS; i++)
 	{
@@ -166,7 +164,7 @@ void test_benchmarks(void)
 		ms[i] = clock() - start;
 	}
 	printf("Multiplication: %d %d %d %d %d %d\n", ms[1], ms[2], ms[3], ms[4], ms[5], ms[6]);
-#if 0
+
 	for (i = 1; i < NUM_DIGITS; i++)
 	{
 		start = clock();
@@ -177,7 +175,6 @@ void test_benchmarks(void)
 		ms[i] = clock() - start;
 	}
 	printf("Division: %d %d %d %d %d %d\n", ms[1], ms[2], ms[3], ms[4], ms[5], ms[6]);
-#endif
 
 	getchar();
 }

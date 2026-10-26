@@ -268,7 +268,8 @@ void big_int_mult(BigInt *a, BigInt *b,BigInt *c){
 	memset(c->integer, 0, sizeof(uint32_t) * sizeC);
 	
 	for(size_t i = 0 ; i < sizeB ; ++i){	//for all elemnets of b
-		uint32_t carry = 0x0;
+		uint32_t lo_prod, hi_prod, lo_temp, hi_temp;
+		uint32_t prod_carry = 0;
 
 		size_t j;
 		for(j = i ; j < sizeA + i ;  j++){//for all elements of a
@@ -279,18 +280,27 @@ void big_int_mult(BigInt *a, BigInt *b,BigInt *c){
 			c->integer[j] = (uint32_t)(sum & MAXVAL);
 			carry = (uint32_t)(sum >> 32);
 #else
-			// TODO: What we did for 64-bit using intrinsics.
-			lo_prod = _mulx_u32( 
+			lo_prod = _mulx_u32(a->integer[j - i], b->integer[i], &hi_prod);
 
+			// sum = c->integer[j] + (hi_prod,lo_prod) + prod_carry
+			unsigned char carry = 0;
+			carry = _addcarry_u32(carry, lo_prod, c->integer[j], &lo_temp);
+			carry = _addcarry_u32(carry, hi_prod, 0, &hi_temp);
 
-
-
+			carry = 0;
+			carry = _addcarry_u32(carry, lo_temp, prod_carry, &c->integer[j]);
+			carry = _addcarry_u32(carry, hi_temp, 0, &prod_carry);
 #endif
 		}
 
+#if 0
 		if(carry){
 			uint64_t sum = (uint64_t)c->integer[j] + carry;
 			c->integer[j] = (uint32_t)(sum & MAXVAL);
+#else
+		if (prod_carry) {
+			c->integer[j] += prod_carry;
+#endif
 		}
 	}
 	
