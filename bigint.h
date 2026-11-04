@@ -4,11 +4,14 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-// 64-bit integers need to be the right width
+// 64-bit integers need to be the right width. bigint uses only
+// the unsigned ones.
 #ifdef _M_X64
 	typedef uint64_t  uint_t;
+	typedef int64_t  int_t;
 #else
-	typedef uint32_t  uint_t;
+typedef uint32_t  uint_t;
+typedef int32_t  int_t;
 #endif
 
 // 32 or 64

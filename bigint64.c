@@ -323,19 +323,13 @@ void big_int_mult(BigInt *a, BigInt *b,BigInt *c){
 
 int big_int_div(BigInt *u, BigInt *v,BigInt *q, BigInt *r)
 {
-	int rc;
-
 	// Allocate q and r to be big enough (we'll trim them later,
 	// as mp_div doesn't return their true sizes)
-	// Quotient size mirrors calc in mp_dev (TODO: Fix this)
+	// Quotient size mirrors calc in mp_div.
 	check_and_reuse(q, u->size - v->size + 1);
 	if (r)
 		check_and_reuse(r, v->size);
-	rc = mp_div(u, v, q, r);
-
-	//TODO: trim leading zero words? NO, better to return the true sizes.
-
-	return rc;
+	return mp_div(u, v, q, r);
 }
 
 int big_int_mod(BigInt *a,BigInt *b, BigInt * c){

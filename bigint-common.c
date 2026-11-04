@@ -261,7 +261,7 @@ BigInt big_int_from_string(char* string)
 			ch = ch - 'A' + 10;
 		else if (ch >= '0')
 			ch -= '0';
-		bigdigit = big_int_from_uint_t((uint_t)ch);		// TODO: this is wasteful - bigdigit gets created and destroyed every time
+		bigdigit = big_int_from_uint_t((uint_t)ch);		// this is wasteful, but speed doesn't matter here
 		big_int_add(&temp, &bigdigit, &a);
 		big_int_destructor(&bigdigit);
 	}

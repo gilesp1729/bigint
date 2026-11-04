@@ -87,9 +87,9 @@ void big_int_print(BigInt *a,int mode,char *caption){
 			big_int_copy(a, &c);					// don't clobber the input
 			while (!big_int_is_zero(&c))
 			{
-				big_int_div(&c, &ten, &q, &r);		// TODO: this will free q/r integers, but watch out for inconsistencies elsewhere. Need div_by_uint_t here.
+				big_int_div(&c, &ten, &q, &r);
 				revbuf[i++] = r.integer[0] + '0';
-				big_int_copy(&q, &c);				// Can be faster as q not rrequired aagain, but see above
+				big_int_copy(&q, &c);
 			}
 			// Print reversed digits forward. Handle zero specially.
 			if (i == 0)
